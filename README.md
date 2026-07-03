@@ -17,6 +17,24 @@ tipo de sistema que un banco o regulador (FINMA) necesitaría: no solo un
 modelo que puntúa transacciones, sino una herramienta end-to-end que un
 analista de compliance podría usar en su día a día.
 
+Hallazgo clave: concept drift post time-step 42
+
+Uno de los resultados más importantes de este proyecto no es una métrica alta, sino una falla real y bien diagnosticada.
+
+Los tres modelos (LightGBM, GraphSAGE, y el ensemble) mantienen un AUC-PR cercano a 0.98 durante los primeros 42 time steps (train + validation), pero se desploma abruptamente a ~0.09 en el set de test (steps 43-49). No es degradación gradual: es un quiebre puntual.
+
+Por qué pasa esto: el dataset Elliptic documenta que, alrededor de ese rango de time steps, ocurrió el cierre de un mercado ilegal real operando sobre la red de Bitcoin capturada por el dataset. Los patrones de transacciones ilícitas después de ese evento son estructuralmente distintos a los de antes — un caso de libro de concept drift: el mundo cambió y el modelo entrenado con datos previos no puede generalizar a ese cambio.
+
+Por qué esto importa para un caso de uso real: es exactamente el problema que enfrenta un sistema de AML en producción. Un modelo puede tener métricas excelentes en backtesting y fallar en producción si el comportamiento de los actores maliciosos cambia (nuevas técnicas de lavado, cierre/apertura de mercados, cambios regulatorios). Esto motiva:
+
+
+Monitoreo continuo de métricas por ventana temporal (no solo un número agregado de test).
+Reentrenamiento periódico con ventanas deslizantes en vez de un split fijo único.
+Alertas de drift automáticas cuando el AUC-PR de producción cae por debajo de un umbral respecto al de validación.
+
+
+Sobre el ensemble: combinar LightGBM + GraphSAGE no mejoró el resultado frente al drift (AUC-PR ensemble 0.037 vs. 0.047 del LightGBM solo) — ambos modelos fallan por la misma causa raíz, así que promediarlos no aporta información nueva. Un ensemble solo ayuda cuando los modelos base fallan de formas distintas; aquí comparten la misma debilidad estructural frente a un cambio de régimen.
+
 ## Arquitectura
 
 1. **Ingesta y grafo** — dataset Elliptic (203k transacciones, 234k aristas) → NetworkX + PyTorch Geometric.
@@ -30,12 +48,12 @@ analista de compliance podría usar en su día a día.
 | Semana | Entregable | Estado |
 |---|---|---|
 | 1-2 | Ingesta, construcción del grafo, EDA | ✅ scaffold listo |
-| 3 | Feature engineering, split temporal | ⏳ |
-| 4 | Baseline LightGBM + SHAP, métrica AUC-PR | ⏳ |
-| 5 | GNN GraphSAGE + MLflow | ⏳ |
-| 6 | Ensemble + GNNExplainer | ⏳ |
-| 7 | FastAPI + generación de SAR con Claude | ⏳ |
-| 8 | Streamlit + Docker + CI/CD + demo | ⏳ |
+| 3 | Feature engineering, split temporal | ✅ |
+| 4 | Baseline LightGBM + SHAP, métrica AUC-PR | ✅ |
+| 5 | GNN GraphSAGE + MLflow | ✅ |
+| 6 | Ensemble + GNNExplainer | ✅ |
+| 7 | FastAPI + generación de SAR con Claude | ⏳ | (sin generación de SAR en vivo, requiere API key)
+| 8 | Streamlit + Docker + CI/CD + demo | ✅ |
 
 ## Cómo correrlo
 
