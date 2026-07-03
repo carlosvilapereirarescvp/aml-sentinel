@@ -1,0 +1,39 @@
+﻿# Entornos virtuales
+venv/
+.venv/
+env/
+
+# Datos (pesados, no van al repo)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Modelos entrenados (pesados, no van al repo)
+models/*.pkl
+models/*.pt
+
+# Variables de entorno / secretos
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
